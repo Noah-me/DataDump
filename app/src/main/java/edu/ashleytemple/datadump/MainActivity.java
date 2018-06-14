@@ -6,12 +6,10 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
-import android.os.Environment;
 import android.support.wearable.activity.WearableActivity;
 import android.util.Log;
 import android.widget.CompoundButton;
 import android.widget.Switch;
-import android.widget.TextView;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -50,28 +48,21 @@ public class MainActivity extends WearableActivity implements SensorEventListene
 
         try {
             //Create directory
+            File dir = new File(MainActivity.this.getApplicationContext().getFilesDir(), "Data");
 
-            //dir exists and is directory but can't write
-            File dir = Environment.getExternalStorageDirectory(); //
+            System.out.println("Made directory? " + dir.mkdir());
 
-            File results = new File(dir, "data");
-
-            if(!results.exists()){
-                boolean worked = results.mkdir();
-                System.out.println("It worked? " + worked);
-            }
-
-            File file = new File(results, date.format((Calendar.getInstance()).getTime()) + ".csv");
+            File file = new File(dir, date.format((Calendar.getInstance()).getTime()) + ".csv");
 
             //Uncomment when file exists
-            //writer = new BufferedWriter(new FileWriter(file, true));
+            writer = new BufferedWriter(new FileWriter(file, true));
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        data = new ArrayList<String>();
+        data = new ArrayList<>();
 
-        Switch mySwitch = (Switch) findViewById(R.id.switch1);
+        Switch mySwitch = findViewById(R.id.switch1);
         //https://stackoverflow.com/questions/11278507/android-widget-switch-on-off-event-listener
         mySwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -94,6 +85,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
         this.orient = new float[3];
         String currentTime = time.format(System.currentTimeMillis());
 
+
         //Check which sensor, set appropriate attribute
         //Need to add some math (subtract gravity, etc.)
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
@@ -114,10 +106,12 @@ public class MainActivity extends WearableActivity implements SensorEventListene
             Log.d("MainActivity",o);
         }
 
-        String line = currentTime + ",";
-        line = line + accValues[0] + "," + accValues[1] + "," + accValues[2] + ",";
-        line = line + orient[0] + "," + orient[1] + "," + orient[2] + "\n";
-        data.add(line);
+        if(event.sensor.getType() == Sensor.TYPE_GYROSCOPE || event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            String line = currentTime + ",";
+            line = line + accValues[0] + "," + accValues[1] + "," + accValues[2] + ",";
+            line = line + orient[0] + "," + orient[1] + "," + orient[2] + "\n";
+            data.add(line);
+        }
     }
 
     /**
@@ -125,15 +119,11 @@ public class MainActivity extends WearableActivity implements SensorEventListene
      */
     private void dumpData() {
         for (int i = 0; i < data.size(); i++) {
-            /*
             try {
                 this.writer.append(data.get(i));
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            */
-            //Because file writing fails, let's check the sensor work
-            System.out.println(data.get(i));
         }
     }
 
