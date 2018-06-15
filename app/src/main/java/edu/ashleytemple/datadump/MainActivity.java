@@ -1,11 +1,13 @@
 package edu.ashleytemple.datadump;
 
+import android.app.Application;
 import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.wearable.activity.WearableActivity;
 import android.util.Log;
 import android.widget.CompoundButton;
@@ -27,16 +29,17 @@ public class MainActivity extends WearableActivity implements SensorEventListene
     private Sensor sensorGyro;
 
     //https://stackoverflow.com/questions/17807777/simpledateformatstring-template-locale-locale-with-for-example-locale-us-for
-    private SimpleDateFormat date = new SimpleDateFormat("MM-dd-yyyy HH:mm", Locale.US);
+    private SimpleDateFormat date = new SimpleDateFormat("MM-dd-yyyy_HH.mm", Locale.US);
     private SimpleDateFormat time = new SimpleDateFormat( "HH:mm:ss.SSS", Locale.US); //How many digits for millisec?
 
     private float[] accValues;
     private float[] gyroValues;
     private float[] orient;
-    private float[] rotationMatrix;
+    private float[] rotationMatrix = new float[9];
 
     private BufferedWriter writer;
     private ArrayList<String> data;
+    private File file;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,11 +51,21 @@ public class MainActivity extends WearableActivity implements SensorEventListene
 
         try {
             //Create directory
-            File dir = new File(MainActivity.this.getApplicationContext().getFilesDir(), "Data");
 
-            System.out.println("Made directory? " + dir.mkdir());
+            File dir = new File(MainActivity.this.getApplicationContext().getExternalFilesDir(null), "SensorData");
+            System.out.println("file path: " + dir.getPath() + ", exists? " + dir.exists());
 
-            File file = new File(dir, date.format((Calendar.getInstance()).getTime()) + ".csv");
+            if(!dir.exists()){
+                System.out.println("Created directory: "+dir.mkdir());
+            }
+
+            file = new File(dir, date.format((Calendar.getInstance()).getTime()) + ".csv");
+            System.out.println("file path of csv: " + file.getPath()+ " exists? " + file.exists());
+            if(!file.exists()){
+                System.out.println("Created csv: " +file.createNewFile());
+            }
+
+
 
             //Uncomment when file exists
             writer = new BufferedWriter(new FileWriter(file, true));
@@ -61,6 +74,7 @@ public class MainActivity extends WearableActivity implements SensorEventListene
         }
 
         data = new ArrayList<>();
+        data.add("Time,X,Y,Z,AccAvg,Azimuth,Pitch,Roll,OrientAvg\n");
 
         Switch mySwitch = findViewById(R.id.switch1);
         //https://stackoverflow.com/questions/11278507/android-widget-switch-on-off-event-listener
@@ -80,9 +94,16 @@ public class MainActivity extends WearableActivity implements SensorEventListene
     @Override
     public void onSensorChanged(SensorEvent event) {
 
-        this.accValues = new float[3];
-        this.gyroValues = new float[3];
-        this.orient = new float[3];
+        if(this.accValues==null){
+            this.accValues = new float[3];
+        }
+        if(this.gyroValues == null){
+            this.gyroValues = new float[3];
+            this.orient = new float[3];
+        }
+
+
+
         String currentTime = time.format(System.currentTimeMillis());
 
 
@@ -102,14 +123,15 @@ public class MainActivity extends WearableActivity implements SensorEventListene
             SensorManager.getRotationMatrixFromVector(rotationMatrix, gyroValues);
             //So if this works, now I have a rotation matrix
             SensorManager.getOrientation(rotationMatrix, orient); //And now I have orientation values
-            String o = "" + (orient == null);
-            Log.d("MainActivity",o);
+
         }
 
+        float accAvg = (accValues[0] + accValues[1] + accValues[2])/3;
+        float orientAvg = (orient[0] + orient[1] + orient[2])/3;
         if(event.sensor.getType() == Sensor.TYPE_GYROSCOPE || event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             String line = currentTime + ",";
-            line = line + accValues[0] + "," + accValues[1] + "," + accValues[2] + ",";
-            line = line + orient[0] + "," + orient[1] + "," + orient[2] + "\n";
+            line = line + accValues[0] + "," + accValues[1] + "," + accValues[2] + ","+ accAvg + ",";
+            line = line + orient[0] + "," + orient[1] + "," + orient[2] +"," + orientAvg+ "\n";
             data.add(line);
         }
     }
@@ -118,12 +140,16 @@ public class MainActivity extends WearableActivity implements SensorEventListene
      * Writes the values stored in data to the file line by line
      */
     private void dumpData() {
-        for (int i = 0; i < data.size(); i++) {
-            try {
-                this.writer.append(data.get(i));
-            } catch (Exception e) {
-                e.printStackTrace();
+        try {
+            FileWriter writer = new FileWriter(file);
+            int size = data.size();
+            for (int i = 0; i < size; i++) {
+                String str = data.get(i);
+                writer.write(str);
             }
+            writer.close();
+        } catch(Exception e){
+            e.printStackTrace();
         }
     }
 
