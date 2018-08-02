@@ -9,18 +9,24 @@
     tools:context=".MainActivity"
     tools:deviceIds="wear">
 
-    <FrameLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="@dimen/inner_frame_layout_padding"
-        app:boxedEdges="all">
+
+        android:orientation="vertical">
 
         <Switch
             android:id="@+id/switch1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:checked="false"
+            android:showText="true"
+            android:gravity="center_vertical|center"
+            android:switchTextAppearance="@style/TextAppearance.Compat.Notification"
             android:textAlignment="center"
             android:textOff="@string/off"
-            android:textOn="@string/on" />
-    </FrameLayout>
+            android:textOn="@string/on"
+            tools:checked="false" />
+    </LinearLayout>
+
 </android.support.wear.widget.BoxInsetLayout>
